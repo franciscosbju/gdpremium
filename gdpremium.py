@@ -94,9 +94,13 @@ def gerar_pdf(dados):
     pdf.cell(200, 10, f"Recibo - Tipo: {dados['tipo']}", ln=True, align='C')
     pdf.ln(10)
 
-    # 📌 Número do Pedido
+    # 📌 Número do Pedido/Orçamento
     pdf.set_font("Arial", 'B', 12)
-    pdf.cell(200, 8, f"Número do Pedido: {dados['numero_pedido']}", ln=True, align='L')
+
+    # Verifica se o tipo selecionado é "Pedido" ou "Orçamento"
+    titulo_numero = "Número do Pedido" if dados['tipo'] == "Pedido" else "Número do Orçamento"
+
+    pdf.cell(200, 8, f"{titulo_numero}: {dados['numero_pedido']}", ln=True, align='L')
 
     # 📌 Data formatada corretamente
     pdf.set_font("Arial", size=12)
@@ -146,9 +150,22 @@ def gerar_pdf(dados):
 
     pdf.ln(20)
 
-    # 📌 Assinatura do cliente centralizada
-    pdf.cell(200, 10, "_________________________________________", ln=True, align='C')
-    pdf.cell(200, 10, f"{dados['cliente']}", ln=True, align='C')
+    # 📌 Assinatura apenas se for Pedido
+    if dados["tipo"] == "Pedido":
+        pdf.cell(200, 10, "_________________________________________", ln=True, align='C')
+        pdf.cell(200, 10, "Gabriel Paulino Gonçalves", ln=True, align='C')
+    
+    # Posiciona as notas no rodapé da página
+    pdf.set_y(-70)  # Move o cursor de escrita para 30 unidades do final da página
+
+    # 📌 Notas no rodapé (sempre presentes)
+    pdf.set_font("Arial", 'BI', 10)  # Negrito e Itálico
+    pdf.set_text_color(255, 0, 0)  # Cor vermelha
+
+    pdf.cell(200, 8, "Nota 01: Prazo de entrega sujeito a alteração, a depender da demanda.", ln=True, align='L')
+    pdf.cell(200, 8, "Nota 02: Em casos de cancelamento, será ressarcido apenas 70% do valor pago.", ln=True, align='L')
+
+    pdf.set_text_color(0, 0, 0)  # Resetando a cor para preto
 
     pdf_file = "recibo.pdf"
     pdf.output(pdf_file)
