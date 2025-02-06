@@ -67,7 +67,13 @@ def formatar_telefone(numero):
         return f"({numero[:2]}) {numero[2:7]}-{numero[7:]}"
     return numero  # Retorna o que foi digitado se não for 11 dígitos
 
-# Função para gerar o PDF sem a logo e com o título centralizado
+from fpdf import FPDF
+
+# Função para formatar valores corretamente (exemplo: R$ 1.200,50)
+def formatar_valor(valor):
+    return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+# Função para gerar o PDF
 def gerar_pdf(dados):
     pdf = FPDF()
     pdf.add_page()
@@ -96,10 +102,7 @@ def gerar_pdf(dados):
 
     # 📌 Número do Pedido/Orçamento
     pdf.set_font("Arial", 'B', 12)
-
-    # Verifica se o tipo selecionado é "Pedido" ou "Orçamento"
     titulo_numero = "Número do Pedido" if dados['tipo'] == "Pedido" else "Número do Orçamento"
-
     pdf.cell(200, 8, f"{titulo_numero}: {dados['numero_pedido']}", ln=True, align='L')
 
     # 📌 Data formatada corretamente
@@ -112,28 +115,39 @@ def gerar_pdf(dados):
     pdf.ln(10)
 
     # 📌 Tabela de Itens
-    pdf.cell(40, 10, "Qtd", 1)
-    pdf.cell(80, 10, "Descrição", 1)
-    pdf.cell(30, 10, "V. Unit", 1)
-    pdf.cell(30, 10, "Valor Total", 1)
-    pdf.ln()
+    pdf.set_font("Arial", 'B', 10)
+    pdf.cell(40, 10, "Qtd", 1, 0, 'C')
+    pdf.cell(80, 10, "Descrição", 1, 0, 'C')
+    pdf.cell(30, 10, "V. Unit", 1, 0, 'C')
+    pdf.cell(30, 10, "Valor Total", 1, 1, 'C')
 
+    pdf.set_font("Arial", '', 10)  # Retorna a fonte normal
+
+    # 📌 Iterar sobre os itens e ajustar altura dinamicamente
     for item in dados['itens']:
-        pdf.cell(40, 10, str(item['Qtd']), 1)
-        pdf.cell(80, 10, item['Descrição'], 1)
-        pdf.cell(30, 10, f"R$ {item['V. Unit']:.2f}".replace(".", ","), 1)
-        pdf.cell(30, 10, f"R$ {item['Valor']:.2f}".replace(".", ","), 1)
-        pdf.ln()
-    
-    pdf.ln(10)
+        descricao = item['Descrição']
+        largura_desc = 80  # Largura fixa da coluna descrição
+        altura_linha = max(10, (pdf.get_string_width(descricao) // largura_desc + 1) * 6)  # Ajuste dinâmico
+
+        x, y = pdf.get_x(), pdf.get_y()
+
+        pdf.cell(40, altura_linha, str(item['Qtd']), 1, 0, 'C')  # Qtd
+        pdf.cell(80, altura_linha, "", 1, 0)  # Espaço para MultiCell
+
+        pdf.set_xy(x + 40, y)  # Move para a posição correta da descrição
+        pdf.multi_cell(80, 6, descricao, 1)  # Insere a descrição com quebra de linha automática
+
+        pdf.set_xy(x + 120, y)  # Ajusta a posição para as próximas colunas
+        pdf.cell(30, altura_linha, formatar_valor(item['V. Unit']), 1, 0, 'C')  # Valor Unitário
+        pdf.cell(30, altura_linha, formatar_valor(item['Valor']), 1, 1, 'C')  # Valor Total
 
     # 📌 Total centralizado e em negrito
     pdf.set_font("Arial", 'B', 14)
-    pdf.cell(200, 10, f"Total R$: {dados['total']:.2f}".replace(".", ","), ln=True, align='C')
+    pdf.cell(200, 10, f"Total R$: {formatar_valor(dados['total'])}", ln=True, align='C')
 
     pdf.set_font("Arial", size=12)
-    pdf.cell(200, 8, f"Entrada R$: {dados['entrada']:.2f}".replace(".", ","), ln=True, align='L')
-    pdf.cell(200, 8, f"Resta R$: {dados['resta']:.2f}".replace(".", ","), ln=True, align='L')
+    pdf.cell(200, 8, f"Entrada R$: {formatar_valor(dados['entrada'])}", ln=True, align='L')
+    pdf.cell(200, 8, f"Resta R$: {formatar_valor(dados['resta'])}", ln=True, align='L')
 
     # 📌 Data de Entrega ou Data de Validade (Dependendo do Tipo)
     if dados["tipo"] == "Orçamento":
@@ -154,15 +168,16 @@ def gerar_pdf(dados):
     if dados["tipo"] == "Pedido":
         pdf.cell(200, 10, "_________________________________________", ln=True, align='C')
         pdf.cell(200, 10, "Gabriel Paulino Gonçalves", ln=True, align='C')
-    
-    # Posiciona as notas no rodapé da página
-    pdf.set_y(-70)  # Move o cursor de escrita para 30 unidades do final da página
+
+    # Posiciona as notas no rodapé ajustando dinamicamente
+    pdf.ln(10)
 
     # 📌 Notas no rodapé (sempre presentes)
     pdf.set_font("Arial", 'BI', 7)  # Negrito e Itálico
     pdf.set_text_color(255, 0, 0)  # Cor vermelha
 
     pdf.cell(200, 8, "Nota 01: Prazo de entrega sujeito a alteração, a depender da demanda.", ln=True, align='L')
+    pdf.ln(4)
     pdf.cell(200, 8, "Nota 02: Em casos de cancelamento, será ressarcido apenas 70% do valor pago.", ln=True, align='L')
 
     pdf.set_text_color(0, 0, 0)  # Resetando a cor para preto
