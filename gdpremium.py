@@ -159,7 +159,7 @@ def gerar_pdf(dados):
     pdf.set_y(-70)  # Move o cursor de escrita para 30 unidades do final da página
 
     # 📌 Notas no rodapé (sempre presentes)
-    pdf.set_font("Arial", 'BI', 10)  # Negrito e Itálico
+    pdf.set_font("Arial", 'BI', 7)  # Negrito e Itálico
     pdf.set_text_color(255, 0, 0)  # Cor vermelha
 
     pdf.cell(200, 8, "Nota 01: Prazo de entrega sujeito a alteração, a depender da demanda.", ln=True, align='L')
