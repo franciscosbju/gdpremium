@@ -5,10 +5,12 @@ from fpdf import FPDF
 import os
 import requests
 from PIL import Image
+from dotenv import load_dotenv  # Importa dotenv
 
-# 🔒 Definir usuário e senha corretos
-USUARIO_CORRETO = "gdpremium"
-SENHA_CORRETA = "premium"
+# 🔒 Carregar variáveis do .env
+load_dotenv()
+USUARIO_CORRETO = os.getenv("USUARIO_CORRETO")
+SENHA_CORRETA = os.getenv("SENHA_CORRETA")
 
 # Inicializar sessão de autenticação
 if "autenticado" not in st.session_state:
