@@ -114,32 +114,21 @@ def gerar_pdf(dados):
     pdf.cell(200, 8, f"Cidade: {dados['cidade']}", ln=True, align='L')
     pdf.ln(10)
 
-    # 📌 Tabela de Itens
-    pdf.set_font("Arial", 'B', 10)
-    pdf.cell(40, 10, "Qtd", 1, 0, 'C')
-    pdf.cell(80, 10, "Descrição", 1, 0, 'C')
-    pdf.cell(30, 10, "V. Unit", 1, 0, 'C')
-    pdf.cell(30, 10, "Valor Total", 1, 1, 'C')
+        # 📌 Tabela de Itens
+    pdf.cell(40, 8, "Qtd", 1)
+    pdf.cell(80, 8, "Descrição", 1)
+    pdf.cell(30, 8, "V. Unit", 1)
+    pdf.cell(30, 8, "Valor Total", 1)
+    pdf.ln()
 
-    pdf.set_font("Arial", '', 10)  # Retorna a fonte normal
-
-    # 📌 Iterar sobre os itens e ajustar altura dinamicamente
     for item in dados['itens']:
-        descricao = item['Descrição']
-        largura_desc = 80  # Largura fixa da coluna descrição
-        altura_linha = max(10, (pdf.get_string_width(descricao) // largura_desc + 1) * 6)  # Ajuste dinâmico
+        pdf.cell(40, 8, str(item['Qtd']), 1)
+        pdf.cell(80, 8, item['Descrição'], 1)
+        pdf.cell(30, 8, f"R$ {item['V. Unit']:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."), 1)
+        pdf.cell(30, 8, f"R$ {item['Valor']:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."), 1)
+        pdf.ln()
 
-        x, y = pdf.get_x(), pdf.get_y()
-
-        pdf.cell(40, altura_linha, str(item['Qtd']), 1, 0, 'C')  # Qtd
-        pdf.cell(80, altura_linha, "", 1, 0)  # Espaço para MultiCell
-
-        pdf.set_xy(x + 40, y)  # Move para a posição correta da descrição
-        pdf.multi_cell(80, 6, descricao, 1)  # Insere a descrição com quebra de linha automática
-
-        pdf.set_xy(x + 120, y)  # Ajusta a posição para as próximas colunas
-        pdf.cell(30, altura_linha, formatar_valor(item['V. Unit']), 1, 0, 'C')  # Valor Unitário
-        pdf.cell(30, altura_linha, formatar_valor(item['Valor']), 1, 1, 'C')  # Valor Total
+    pdf.ln(10)
 
     # 📌 Total centralizado e em negrito
     pdf.set_font("Arial", 'B', 14)
@@ -176,9 +165,9 @@ def gerar_pdf(dados):
     pdf.set_font("Arial", 'BI', 7)  # Negrito e Itálico
     pdf.set_text_color(255, 0, 0)  # Cor vermelha
 
-    pdf.cell(200, 8, "Nota 01: Prazo de entrega sujeito a alteração, a depender da demanda.", ln=True, align='L')
+    pdf.cell(200, 2, "Nota 01: Prazo de entrega sujeito a alteração, a depender da demanda.", ln=True, align='L')
     pdf.ln(4)
-    pdf.cell(200, 8, "Nota 02: Em casos de cancelamento, será ressarcido apenas 70% do valor pago.", ln=True, align='L')
+    pdf.cell(200, 2, "Nota 02: Em casos de cancelamento, será ressarcido apenas 70% do valor pago.", ln=True, align='L')
 
     pdf.set_text_color(0, 0, 0)  # Resetando a cor para preto
 
@@ -251,7 +240,13 @@ total = 0
 
 for i in range(int(num_itens)):
     qtd = st.number_input(f"🔢 Qtd item {i+1}", min_value=1, step=1)
-    descricao = st.text_input(f"📝 Descrição item {i+1}")
+
+    # Campo de descrição com contador
+    descricao = st.text_input(f"📝 Descrição item {i+1} (Máx: 35 caracteres)", max_chars=35)
+    
+    if len(descricao) > 35:
+        st.warning(f"⚠️ Você digitou {len(descricao)} caracteres. Máximo permitido: 35.")
+        descricao = descricao[:35]  # Corta para garantir que o valor no backend fique correto
 
     v_unit = st.number_input(f"💲 V. Unit item {i+1}", min_value=0.00, format="%.2f", value=0.00)
     valor = qtd * v_unit
@@ -259,6 +254,10 @@ for i in range(int(num_itens)):
     tabela.append({"Qtd": qtd, "Descrição": descricao, "V. Unit": v_unit, "Valor": valor})
 
     st.write(f"💰 Valor item {i+1}: R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+
+# Mensagem de aviso se o usuário tentar digitar mais que 45 caracteres
+if any(len(item["Descrição"]) > 45 for item in tabela):
+    st.warning("⚠️ A descrição dos itens não pode ultrapassar 45 caracteres.")
 
 # 📌 Exibir total formatado corretamente
 st.write(f"### 🏷️ Total R$: {total:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
@@ -283,16 +282,19 @@ data_entrega = st.date_input(data_label, key=data_key).strftime('%d/%m/%Y')
 # 📌 Exibir a data formatada corretamente
 st.write(f"📌 Data Formatada: **{data_entrega}**")
 
-# Verificar se as descrições dos itens estão preenchidas
+# 📌 Verificar se todas as descrições estão preenchidas corretamente
 descricao_vazia = any(item["Descrição"].strip() == "" for item in tabela)
+descricao_longas = any(len(item["Descrição"]) > 35 for item in tabela)
 
-# Verificar se os campos obrigatórios estão preenchidos corretamente
+# 📌 Verificar se os campos obrigatórios estão preenchidos corretamente
 if not cliente or not telefone or not estado or not cidade or total <= 0 or not data_entrega or descricao_vazia or not telefone.isdigit() or len(telefone) not in [10, 11]:
     st.error("⚠️ Todos os campos são obrigatórios, incluindo a descrição de todos os itens! O telefone deve conter apenas números e ter 10 ou 11 dígitos.")
+elif descricao_longas:
+    st.error("⚠️ Cada descrição de item deve ter no máximo 35 caracteres. Ajuste e tente novamente.")
 else:
     if st.button("📄 Gerar PDF"):
         dados = {
-            "numero_pedido": st.session_state.numero_pedido,  # Inclui o número do pedido
+            "numero_pedido": st.session_state.numero_pedido,
             "tipo": tipo,
             "data": data,
             "cliente": cliente,
