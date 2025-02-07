@@ -71,43 +71,32 @@ def formatar_telefone(numero):
 
 from fpdf import FPDF
 
-# Função para formatar valores corretamente (exemplo: R$ 1.200,50)
 def formatar_valor(valor):
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-# Função para gerar o PDF
 def gerar_pdf(dados):
     pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
-
-    # Definir a fonte Arial como padrão
     pdf.set_font("Arial", 'B', 16)
-
-    # 📌 Título da empresa no topo, centralizado e maior
-    pdf.set_font("Arial", 'B', 18)
     pdf.cell(200, 8, "GD PREMIUM JÓIAS 18k-750", ln=True, align='C')
-
-    # 📍 Informações da empresa em tamanho menor e mais compactas
+    
     pdf.set_font("Arial", size=10)
     pdf.cell(200, 4, "Endereço: Rua Radialista Edesio de Oliveira, nº 80,", ln=True, align='C')
     pdf.cell(200, 4, "Bairro Centro, Juazeiro do Norte - CE", ln=True, align='C')
     pdf.cell(200, 4, "Telefone P/ Contato: (88) 98805-4374", ln=True, align='C')
     pdf.cell(200, 4, "E-mail: gdgdpremium10@gmail.com", ln=True, align='C')
     pdf.cell(200, 4, "Instagram: @gd.premium", ln=True, align='C')
-
     pdf.ln(5)
-
-    # 📌 Título do recibo com tipo
+    
     pdf.set_font("Arial", 'B', 14)
     pdf.cell(200, 10, f"Recibo - Tipo: {dados['tipo']}", ln=True, align='C')
     pdf.ln(10)
-
-    # 📌 Número do Pedido/Orçamento
+    
     pdf.set_font("Arial", 'B', 12)
     titulo_numero = "Número do Pedido" if dados['tipo'] == "Pedido" else "Número do Orçamento"
     pdf.cell(200, 8, f"{titulo_numero}: {dados['numero_pedido']}", ln=True, align='L')
-
-    # 📌 Data formatada corretamente
+    
     pdf.set_font("Arial", size=12)
     pdf.cell(200, 8, f"Data: {dados['data']}", ln=True, align='L')
     pdf.cell(200, 8, f"Cliente: {dados['cliente']}", ln=True, align='L')
@@ -115,31 +104,59 @@ def gerar_pdf(dados):
     pdf.cell(200, 8, f"Estado: {dados['estado']}", ln=True, align='L')
     pdf.cell(200, 8, f"Cidade: {dados['cidade']}", ln=True, align='L')
     pdf.ln(10)
-
-        # 📌 Tabela de Itens
-    pdf.cell(40, 8, "Qtd", 1)
-    pdf.cell(80, 8, "Descrição", 1)
-    pdf.cell(30, 8, "V. Unit", 1)
-    pdf.cell(30, 8, "Valor Total", 1)
+    
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(20, 8, "Qtd", 1, align='C')
+    pdf.cell(110, 8, "Descrição", 1, align='C')
+    pdf.cell(30, 8, "V. Unit", 1, align='C')
+    pdf.cell(30, 8, "Valor Total", 1, align='C')
     pdf.ln()
-
+    
+    pdf.set_font("Arial", size=10)
+    
     for item in dados['itens']:
-        pdf.cell(40, 8, str(item['Qtd']), 1)
-        pdf.cell(80, 8, item['Descrição'], 1)
-        pdf.cell(30, 8, f"R$ {item['V. Unit']:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."), 1)
-        pdf.cell(30, 8, f"R$ {item['Valor']:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."), 1)
+        y_start = pdf.get_y()
+        
+        descricao_linhas = pdf.multi_cell(110, 6, item['Descrição'], border=0, align='L', split_only=True)
+        altura_linha = len(descricao_linhas) * 6
+        
+        pdf.cell(20, altura_linha, str(item['Qtd']), 1, align='C')
+        x_descricao = pdf.get_x()
+        pdf.multi_cell(110, 6, item['Descrição'], border=1, align='L')
+        
+        y_end = pdf.get_y()
+        
+        pdf.set_xy(x_descricao + 110, y_start)
+        pdf.cell(30, altura_linha, formatar_valor(item['V. Unit']), 1, align='C')
+        pdf.cell(30, altura_linha, formatar_valor(item['Valor']), 1, align='C')
         pdf.ln()
-
+    
     pdf.ln(10)
-
-    # 📌 Total centralizado e em negrito
     pdf.set_font("Arial", 'B', 14)
     pdf.cell(200, 10, f"Total R$: {formatar_valor(dados['total'])}", ln=True, align='C')
+    
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(200, 8, f"Entrada R$: {formatar_valor(float(dados.get('entrada', 0)))}", ln=True, align='L')
 
-    pdf.set_font("Arial", size=12)
-    pdf.cell(200, 8, f"Entrada R$: {formatar_valor(dados['entrada'])}", ln=True, align='L')
-    pdf.cell(200, 8, f"Resta R$: {formatar_valor(dados['resta'])}", ln=True, align='L')
+    # 📌 Captura valores corretamente e garante que sejam float
+    desconto = float(dados.get('desconto', 0))  # Garante que sempre seja um número
+    tipo_desconto = dados.get('tipo_desconto', '').strip()  # Remove espaços extras
+    percentual = float(dados.get('percentual', 0))  # Garante que seja um número
 
+    # 📌 Inicializa desconto_texto e verifica se há desconto aplicado
+    desconto_texto = ""
+
+    if desconto > 0 and tipo_desconto == "Valor R$":
+        desconto_texto = f"Desconto: {formatar_valor(desconto)}"
+    elif percentual > 0 and tipo_desconto == "Percentual (%)":
+        desconto_texto = f"Desconto: {percentual:.2f}%"
+
+    # 📌 Agora o desconto será sempre impresso corretamente caso seja maior que 0
+    if desconto_texto.strip():  # Garante que não seja uma string vazia
+        pdf.cell(200, 8, desconto_texto, ln=True, align='L')
+
+    pdf.cell(200, 8, f"Resta R$: {formatar_valor(float(dados.get('resta', 0)))}", ln=True, align='L')
+    
     # 📌 Data de Entrega ou Data de Validade (Dependendo do Tipo)
     if dados["tipo"] == "Orçamento":
         pdf.cell(200, 8, f"Data de Validade: {dados['data_entrega']}", ln=True, align='L')
@@ -188,7 +205,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-st.markdown("*Developed by Francisco Carneiro*", unsafe_allow_html=True)
+st.markdown("*Developed by Francisco Carneiro - (88) 99976-2740*", unsafe_allow_html=True)
 
 # 📌 Escolher o tipo (Pedido ou Orçamento)
 tipo = st.radio("Tipo:", ["Pedido", "Orçamento"])
@@ -238,17 +255,17 @@ st.subheader("📦 Itens do Recibo")
 num_itens = st.number_input("Número de itens", min_value=1, step=1)
 
 tabela = []
-total = 0
+total = 0.00
 
 for i in range(int(num_itens)):
     qtd = st.number_input(f"🔢 Qtd item {i+1}", min_value=1, step=1)
-
-    # Campo de descrição com contador
-    descricao = st.text_input(f"📝 Descrição item {i+1} (Máx: 35 caracteres)", max_chars=35)
     
-    if len(descricao) > 35:
-        st.warning(f"⚠️ Você digitou {len(descricao)} caracteres. Máximo permitido: 35.")
-        descricao = descricao[:35]  # Corta para garantir que o valor no backend fique correto
+    # Campo de descrição com contador
+    descricao = st.text_input(f"📝 Descrição item {i+1} (Máx: 500 caracteres)", max_chars=500)
+    
+    if len(descricao) > 500:
+        st.warning(f"⚠️ Você digitou {len(descricao)} caracteres. Máximo permitido: 500.")
+        descricao = descricao[:500]  # Garante que o backend receba apenas 500 caracteres válidos
 
     v_unit = st.number_input(f"💲 V. Unit item {i+1}", min_value=0.00, format="%.2f", value=0.00)
     valor = qtd * v_unit
@@ -257,16 +274,30 @@ for i in range(int(num_itens)):
 
     st.write(f"💰 Valor item {i+1}: R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
 
-# Mensagem de aviso se o usuário tentar digitar mais que 45 caracteres
-if any(len(item["Descrição"]) > 45 for item in tabela):
-    st.warning("⚠️ A descrição dos itens não pode ultrapassar 45 caracteres.")
+# Mensagem de aviso se alguma descrição ultrapassar o limite
+if any(len(item["Descrição"]) > 500 for item in tabela):
+    st.warning("⚠️ A descrição dos itens não pode ultrapassar 500 caracteres.")
 
 # 📌 Exibir total formatado corretamente
 st.write(f"### 🏷️ Total R$: {total:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
 
-# 📌 Entrada e Resta
+# 📌 Entrada
 entrada = st.number_input("💳 Entrada R$", min_value=0.00, max_value=total, format="%.2f")
-resta = total - entrada
+
+# 📌 Escolher tipo de desconto
+tipo_desconto = st.radio("🛒 Tipo de Desconto", ("Valor R$", "Percentual (%)"))
+
+desconto = 0.00
+if tipo_desconto == "Valor R$":
+    desconto = st.number_input("💰 Desconto R$", min_value=0.00, max_value=total, format="%.2f")
+elif tipo_desconto == "Percentual (%)":
+    percentual = st.number_input("📊 Desconto %", min_value=0.00, max_value=100.00, format="%.2f")
+    desconto = (percentual / 100) * total
+
+# 📌 Calcular o valor restante após entrada e desconto
+resta = total - entrada - desconto
+
+# 📌 Exibir o valor restante formatado
 st.write(f"### 🏷️ Resta R$: {resta:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
 
 # 📌 Alterar Data e Mostrar Alerta ao selecionar "Orçamento"
@@ -286,30 +317,33 @@ st.write(f"📌 Data Formatada: **{data_entrega}**")
 
 # 📌 Verificar se todas as descrições estão preenchidas corretamente
 descricao_vazia = any(item["Descrição"].strip() == "" for item in tabela)
-descricao_longas = any(len(item["Descrição"]) > 35 for item in tabela)
+descricao_longas = any(len(item["Descrição"]) > 500 for item in tabela)
 
 # 📌 Verificar se os campos obrigatórios estão preenchidos corretamente
 if not cliente or not telefone or not estado or not cidade or total <= 0 or not data_entrega or descricao_vazia or not telefone.isdigit() or len(telefone) not in [10, 11]:
     st.error("⚠️ Todos os campos são obrigatórios, incluindo a descrição de todos os itens! O telefone deve conter apenas números e ter 10 ou 11 dígitos.")
 elif descricao_longas:
-    st.error("⚠️ Cada descrição de item deve ter no máximo 35 caracteres. Ajuste e tente novamente.")
+    st.error("⚠️ Cada descrição de item deve ter no máximo 500 caracteres. Ajuste e tente novamente.")
 else:
     if st.button("📄 Gerar PDF"):
         dados = {
-            "numero_pedido": st.session_state.numero_pedido,
-            "tipo": tipo,
-            "data": data,
-            "cliente": cliente,
-            "telefone": telefone_formatado,
-            "estado": estado,
-            "cidade": cidade,
-            "itens": tabela,
-            "total": total,
-            "entrada": entrada,
-            "resta": resta,
-            "data_entrega": data_entrega
-        }
-        
+        "numero_pedido": st.session_state.numero_pedido,
+        "tipo": tipo,
+        "data": data,
+        "cliente": cliente,
+        "telefone": telefone_formatado,
+        "estado": estado,
+        "cidade": cidade,
+        "itens": tabela,
+        "total": total,
+        "entrada": entrada,
+        "resta": resta,
+        "data_entrega": data_entrega,
+        "desconto": desconto,  # 🔥 Agora o desconto será passado para o PDF!
+        "tipo_desconto": tipo_desconto,  # 🔥 Agora o tipo do desconto será passado!
+        "percentual": percentual if tipo_desconto == "Percentual (%)" else 0  # 🔥 Se for percentual, envia o valor, senão, mantém 0
+    }
+
         pdf_file = gerar_pdf(dados)  # Gera o PDF normalmente
 
         # Gerar um novo número do pedido
