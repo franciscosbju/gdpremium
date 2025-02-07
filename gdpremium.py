@@ -288,14 +288,17 @@ entrada = st.number_input("💳 Entrada R$", min_value=0.00, max_value=total, fo
 tipo_desconto = st.radio("🛒 Tipo de Desconto", ("Valor R$", "Percentual (%)"))
 
 desconto = 0.00
+percentual = 0.00
+
 if tipo_desconto == "Valor R$":
     desconto = st.number_input("💰 Desconto R$", min_value=0.00, max_value=total, format="%.2f")
 elif tipo_desconto == "Percentual (%)":
     percentual = st.number_input("📊 Desconto %", min_value=0.00, max_value=100.00, format="%.2f")
-    desconto = (percentual / 100) * total
 
-# 📌 Calcular o valor restante após entrada e desconto
-resta = total - entrada - desconto
+# 📌 Calcular o valor restante corretamente após a entrada e o desconto
+valor_pos_entrada = total - entrada  # Primeiro subtrai a entrada
+desconto_aplicado = (percentual / 100) * valor_pos_entrada if tipo_desconto == "Percentual (%)" else desconto
+resta = valor_pos_entrada - desconto_aplicado  # Agora aplica o desconto no valor restante
 
 # 📌 Exibir o valor restante formatado
 st.write(f"### 🏷️ Resta R$: {resta:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
