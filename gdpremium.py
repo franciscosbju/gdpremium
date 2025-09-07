@@ -9,8 +9,8 @@ from dotenv import load_dotenv  # Importa dotenv
 
 # 🔒 Carregar variáveis do .env
 load_dotenv()
-USUARIO_CORRETO = os.getenv("USUARIO_CORRETO")
-SENHA_CORRETA = os.getenv("SENHA_CORRETA")
+USUARIO_CORRETO = "gdpremium"
+SENHA_CORRETA = "premium"
 
 # Inicializar sessão de autenticação
 if "autenticado" not in st.session_state:
@@ -372,3 +372,4 @@ else:
         # Botão de download com o nome correto
         with open(pdf_file, "rb") as f:
             st.download_button("📥 Baixar PDF", f, file_name=pdf_file_name, mime="application/pdf")
+
