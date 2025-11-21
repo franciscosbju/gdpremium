@@ -11,6 +11,17 @@ st.set_page_config(
 )
 
 # ---------------------------------------------
+# OCULTAR MENUS, LOGO STREAMLIT, FOOTER, ETC
+# ---------------------------------------------
+st.markdown("""
+<style>
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+</style>
+""", unsafe_allow_html=True)
+
+# ---------------------------------------------
 # ESTILOS (CSS ELEGANTE)
 # ---------------------------------------------
 st.markdown("""
@@ -134,7 +145,7 @@ O pagamento deverá ser realizado via **PIX**, podendo ser feito de duas formas:
 st.markdown("---")
 
 # ---------------------------------------------
-# QR CODE NOVO
+# QR CODE NOVO (100% CENTRALIZADO)
 # ---------------------------------------------
 st.markdown("<div style='text-align:center; font-weight:600; font-size:16px;'>QR Code para pagamento via PIX</div>", unsafe_allow_html=True)
 
